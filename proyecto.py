@@ -716,6 +716,18 @@ def remove_nulo(r):
                 subr = subr[:-2]
                 return subr+"("+subs+"|E)"+postr
 
+def check_parenthesis(r):
+    contador = 0
+    for char in r:
+        if char == "(":
+            contador += 1
+        elif char == ")":
+            contador -= 1
+    
+    if contador > 0:
+        r = r + (")"*contador)
+    return r
+
 
 
 if __name__ == "__main__":
@@ -725,11 +737,13 @@ if __name__ == "__main__":
 
     # if "?" in re:
     #     re = remove_nulo(re)
+    re = check_parenthesis(re)
     while( "+" in re):
         re = remove_cerr_pos(re)
     while( "?" in re):
         re = remove_nulo(re)
     # re ="a|b"
+    re = check_parenthesis(re)
     print(re)
     af = AF(re)
 

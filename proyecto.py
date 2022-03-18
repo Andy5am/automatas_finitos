@@ -1,10 +1,12 @@
+
+
 import re as regex
 from textwrap import indent
 from binarytree import Node as BinaryTreeNode
 import json
 import graphviz
 
-class Node:
+class Nodo:
     def __init__(self, value, left=None, right=None):
         self.data = value
         self.left = left
@@ -93,26 +95,26 @@ class AF:
                 if ((secondary_root_node is None and self.actual_node is None) or i == 0) and i + 1 < len(secondary_exp) and regex.match(r"[a-zA-Z#]", secondary_exp[i+1]):
                     # Si viene un caso de ab(*, +) en donde primero se hace cerradura de kleen
                     if i + 2 < len(secondary_exp) and (secondary_exp[i+2] == "*" or secondary_exp[i+2] == "?"):
-                        self.add_child(secondary_root_node, ".", Node(secondary_exp[i]), Node(secondary_exp[i+2], Node(secondary_exp[i+1]), None), "l")
+                        self.add_child(secondary_root_node, ".", Nodo(secondary_exp[i]), Nodo(secondary_exp[i+2], Nodo(secondary_exp[i+1]), None), "l")
                         i += 2
                     # Si viene letra entonces se agrega el punto representando la concatenacion
                     else:
-                        self.add_child(secondary_root_node, ".", Node(secondary_exp[i]), Node(secondary_exp[i+1]), "l")
+                        self.add_child(secondary_root_node, ".", Nodo(secondary_exp[i]), Nodo(secondary_exp[i+1]), "l")
                         i += 1
                 # Si es cualquier letra que no sea de inicio Se crea concatenacion con el hijo de la izquierda
                 elif (secondary_root_node is None and self.actual_node is not None) or i != 0:
-                    self.add_child(secondary_root_node, ".", None, Node(secondary_exp[i]), "l")
+                    self.add_child(secondary_root_node, ".", None, Nodo(secondary_exp[i]), "l")
                 # Si no es nada de lo anterior es solo una letra
                 else:
                     self.add_child(secondary_root_node, secondary_exp[i], None, None, "l")
                 # Si viene concatenacion en parentesis seguida de * o +
                 if i + 1 < len(secondary_exp):
                     if secondary_exp[i+1] == "*" or secondary_exp[i+1] == "?":
-                        self.add_child(secondary_root_node, secondary_exp[i+1], Node(secondary_exp[i]), None, "l")
+                        self.add_child(secondary_root_node, secondary_exp[i+1], Nodo(secondary_exp[i]), None, "l")
                     elif secondary_exp[i+1] == ")":
                         if i + 2 < len(secondary_exp):
                             if secondary_exp[i+2] == "*" or secondary_exp[i+2] == "?":
-                                self.add_child(secondary_root_node, secondary_exp[i+2], Node(secondary_exp[i]), None, "l")
+                                self.add_child(secondary_root_node, secondary_exp[i+2], Nodo(secondary_exp[i]), None, "l")
             
             # Si es or o concatenacion agrega el hijo a la derecha
             elif secondary_exp[i] == "|" or secondary_exp[i] == ".":
@@ -126,12 +128,12 @@ class AF:
                     secondary_node = self.secondary_roots.pop(secondary_root_node + 1)
 
                 if secondary_node is not None:
-                    self.add_child(secondary_root_node, secondary_exp[i], Node(secondary_exp[i-1]), secondary_node, "l")
+                    self.add_child(secondary_root_node, secondary_exp[i], Nodo(secondary_exp[i-1]), secondary_node, "l")
 
                 if end_of_exp < len(secondary_exp) and secondary_exp[end_of_exp] == ")":
                     if end_of_exp + 1 < len(secondary_exp):
                         if secondary_exp[end_of_exp+1] == "*" or secondary_exp[end_of_exp+1] == "?":
-                            self.add_child(secondary_root_node, secondary_exp[end_of_exp+1], Node(secondary_exp[end_of_exp+1]), None, "l")
+                            self.add_child(secondary_root_node, secondary_exp[end_of_exp+1], Nodo(secondary_exp[end_of_exp+1]), None, "l")
 
                 i = i + end_of_exp + 1
             else:
@@ -146,20 +148,20 @@ class AF:
         # si es el arbol principal
         if secondary_root_node is None:
             if self.actual_node is None:
-                self.actual_node = Node(values, left, right)
+                self.actual_node = Nodo(values, left, right)
             else:
                 if is_brother == "l":
-                    self.actual_node = Node(values, self.actual_node, right)
+                    self.actual_node = Nodo(values, self.actual_node, right)
         # si es un arbol secundario
         else:
             if secondary_root_node == len(self.secondary_roots):
-                self.secondary_roots.append(Node(values, left, right))
+                self.secondary_roots.append(Nodo(values, left, right))
             elif secondary_root_node < len(self.secondary_roots):
                 if self.secondary_roots[secondary_root_node] is None:
-                    self.secondary_roots[secondary_root_node] = Node(values, left, right)
+                    self.secondary_roots[secondary_root_node] = Nodo(values, left, right)
                 else:
                     if is_brother == "l":
-                        self.secondary_roots[secondary_root_node] = Node(values, self.secondary_roots[secondary_root_node], right)
+                        self.secondary_roots[secondary_root_node] = Nodo(values, self.secondary_roots[secondary_root_node], right)
 
     #Funcion anulable
     def anulable(self, node, data):
@@ -314,22 +316,27 @@ class AF:
 
     # Algoritmo para simular un AFD
     # Para el algoritmo de pasar de exp a AFD
-    def simulacion(self, trans, cadena, final_char):
+    def simulacion(self, trans, cadena, final_char, alfabeto):
         # Se empieza en estado 0
         current_state = "S0"
-        # Se recorre la cadena
+        cadena = cadena.replace("E","")
         for char in cadena:
-            llave = ""
-            # Se recorre la tabla de transiciones para buscar el estado que tiene esta transicion
-            for key, v in trans.items():
-                # Si si hay una transicion con este caracter para el estado actual se guarda el estado
-                if v["name"] == current_state and v[char] != None:
-                    llave = key
-                # Si no siginifica que no acepta la cadena
-                elif v["name"] == current_state and v[char] == None:
-                    return False
-            # Se cambia al nuevo estado
-            current_state = trans[llave][char]
+            if char not in alfabeto:
+                return False
+        # Se recorre la cadena
+        if cadena != "":
+            for char in cadena:
+                llave = ""
+                # Se recorre la tabla de transiciones para buscar el estado que tiene esta transicion
+                for key, v in trans.items():
+                    # Si si hay una transicion con este caracter para el estado actual se guarda el estado
+                    if v["name"] == current_state and v[char] != None:
+                        llave = key
+                    # Si no siginifica que no acepta la cadena
+                    elif v["name"] == current_state and v[char] == None:
+                        return False
+                # Se cambia al nuevo estado
+                current_state = trans[llave][char]
         # Ya finalizado de recorrer y con un estado final se comprueba si es de aceptacion
         for key, v in trans.items():
             # Se recorre la tabla y si el # se encuentra en los valores de este estado se acepta
@@ -502,7 +509,11 @@ class AF:
         return final_states     
 
     #Funcion para simular AFN
-    def simulacionAFN(self, cadena, trans, final_state):
+    def simulacionAFN(self, cadena, trans, final_state, alfabeto):
+
+        for char in cadena:
+            if char not in alfabeto:
+                return False
         #Cerradura del primer estado
         states = self.cerraduraEpsilon("S0", trans, [])
         contador = 1
@@ -525,7 +536,6 @@ class AF:
     #Algoritmo de subconjuntos
     def subconjuntos(self, trans, data, alfabeto):
         #Se le quita E del los posibles transiciones porque AFD no tienen E
-        print(json.dumps(trans, indent=2))
         contador = 0
         alfabeto.remove("E")
         # Cerradura de epsilon del primer estado
@@ -535,7 +545,6 @@ class AF:
         data[str(cerradura)] = {
             "name": str(contador),
         }
-        print(alfabeto)
         for letra in alfabeto:
             data[str(cerradura)][letra] = None
         contador += 1
@@ -578,21 +587,25 @@ class AF:
             if initial_size == final_size:
                 #Si ya esta todo lleno se sale
                 cont = not all(data.values())
-        print(data)
         return data
 
     #Simulacion AFD
-    def simulacionAFD(self, trans, cadena, final_char):
+    def simulacionAFD(self, trans, cadena, final_char, alfabeto):
         #Se recorre y si hay una transicion para el estado actual se actualiza 
         current_state = "0"
+        cadena = cadena.replace("E","")
         for char in cadena:
-            llave = ""
-            for key, v in trans.items():
-                if v["name"] == current_state and v[char] != None:
-                    llave = key
-                elif v["name"] == current_state and v[char] == None:
-                    return False
-            current_state = trans[llave][char]
+            if char not in alfabeto:
+                return False
+        if cadena != "":
+            for char in cadena:
+                llave = ""
+                for key, v in trans.items():
+                    if v["name"] == current_state and v[char] != None:
+                        llave = key
+                    elif v["name"] == current_state and v[char] == None:
+                        return False
+                current_state = trans[llave][char]
         #Se ve que caracteres estan en el estados final si se encuentra el # pertenece
         for key, v in trans.items():
             if v["name"] == current_state:
@@ -656,13 +669,12 @@ def remove_cerr_pos(r):
                     else:
                         subs = r[i]
                         i=-1
-            print("sub: ",subr, " subs: ", subs," post: ", postr)
             if len(subs) == 1:
                 return subr+"*"+subs+postr
             else:
                 return subr+"*("+subs+")"+postr
 
-def removeNulo(r):
+def remove_nulo(r):
     for c in range(0, len(r), 1):
         if r[c] == "?":
             subr = r[:c]
@@ -712,11 +724,11 @@ if __name__ == "__main__":
     cadena = input('Ingrese la cadena a probar: ')
 
     # if "?" in re:
-    #     re = removeNulo(re)
+    #     re = remove_nulo(re)
     while( "+" in re):
         re = remove_cerr_pos(re)
     while( "?" in re):
-        re = removeNulo(re)
+        re = remove_nulo(re)
     # re ="a|b"
     print(re)
     af = AF(re)
@@ -774,7 +786,7 @@ if __name__ == "__main__":
         final_state = af.thompson(arbolito, data, alfabeto, trans)
 
         #Se simula el AFN
-        resultadoAFN = af.simulacionAFN(cadena, trans, "S"+str(final_state-1))
+        resultadoAFN = af.simulacionAFN(cadena, trans, "S"+str(final_state-1), alfabeto)
 
         #Se hace subconjuntos
         af.subconjuntos(trans, datos, alfabeto)
@@ -796,7 +808,7 @@ if __name__ == "__main__":
             if ("S"+str(final_state-1)) in st:
                 afd.node(datos[key]["name"], datos[key]["name"], shape='doublecircle')
             else:
-                afd.node(datos[key]["name"], datos[key]["name"], shape='circle')
+                afd.node(datos[key]["name"], datos[key]["name"])
                 
         # Se hacen las transiciones
         for key, v in datos.items():
@@ -809,7 +821,7 @@ if __name__ == "__main__":
                     if ("S"+str(final_state-1)) in states:
                         afd.node(v["name"], v["name"],  shape='doublecircle')
                     else:
-                        afd.node(v["name"], v["name"], shape='circle')
+                        afd.node(v["name"], v["name"])
                     afd.node(v[c], v[c])
                     afd.edge(v["name"], v[c], c)
 
@@ -817,7 +829,7 @@ if __name__ == "__main__":
         afd.render(directory='automatas', filename='Subconjuntos-AFD')
 
         #Se simula el AFD
-        resultadoAFD = af.simulacionAFD(datos, cadena, "S"+str(final_state-1))
+        resultadoAFD = af.simulacionAFD(datos, cadena, "S"+str(final_state-1), alfabeto)
 
         #Resultados de salida
         if resultadoAFN:
@@ -883,14 +895,13 @@ if __name__ == "__main__":
         #Se llena la tabla de transiciones
         af.transiciones(transiciones, arbol, data, alfabeto)
         # Se simula el afd
-        resultado = af.simulacion(transiciones, cadena, str(arbol.right.value))
+        resultado = af.simulacion(transiciones, cadena, str(arbol.right.value), alfabeto)
 
         #Resultado
         if resultado:
             print("La cadena pertenece")
         else:
             print("La cadena no pertenece")
-        print(json.dumps(transiciones, indent=2))
 
         #Se dibuja el afd
         dot = graphviz.Digraph(comment="AFD", format='png')
